@@ -125,12 +125,12 @@ int main()
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    // glm::mat4 model(1.0f);
-    // model = glm::scale(model, glm::vec3(0.5f,0.5f,0.5f));
-    // std::cout << glm::to_string(model[0]) << std::endl;
-    // std::cout << glm::to_string(model[1]) << std::endl;
-    // std::cout << glm::to_string(model[2]) << std::endl;
-    // std::cout << glm::to_string(model[3]) << std::endl;
+    glm::mat4 model(1.0f);
+    model = glm::scale(model, glm::vec3(0.5f,0.5f,0.5f));
+    std::cout << glm::to_string(model[0]) << std::endl;
+    std::cout << glm::to_string(model[1]) << std::endl;
+    std::cout << glm::to_string(model[2]) << std::endl;
+    std::cout << glm::to_string(model[3]) << std::endl;
 
     // glm::vec4 worldspace_vec = (model * glm::vec4(-1.0f,-1.0f, 1.0f, 1.0f));
     // std::cout << "\n";
@@ -140,24 +140,13 @@ int main()
     // GLuint location = glGetUniformLocation(shaderProgram, "model");
     // glUniformMatrix4fv(location, 1, false, glm::value_ptr(model));
 
-    // hardcoded for now
-    std::string filename = "/Users/donny/Documents/Model Transformations/data/cube.obj"; 
+    std::string directory = "data/";
+    // Implement user input to read filename
+    std::string filename = "cube.obj";
+    std::string filepath = directory + filename;
     std::vector<Vertex> verticesVector;
     size_t numVertices = 0;
-    std::vector<GLfloat> vertices = readObjFile(filename, verticesVector, numVertices);
-
-    const std::vector<GLfloat> vertexColors
-    {
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 1.0f,
-    };
+    std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices);
 
     // if (faceData) {
     //     std::cout << "Number of vertices: " << numVertices << std::endl;
