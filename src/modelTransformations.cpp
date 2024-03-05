@@ -141,7 +141,7 @@ int main()
     // glUniformMatrix4fv(location, 1, false, glm::value_ptr(model));
 
     // hardcoded for now
-    std::string filename = "/Users/donny/Documents/Model Transformations/data/triangles.obj"; 
+    std::string filename = "/Users/donny/Documents/Model Transformations/data/cube.obj"; 
     std::vector<Vertex> verticesVector;
     size_t numVertices = 0;
     std::vector<GLfloat> vertices = readObjFile(filename, verticesVector, numVertices);
@@ -185,7 +185,7 @@ int main()
     // unsigned int numVertices = sizeof(vertices)/3;
 
 
-    unsigned int VBO, VBO2, VAO;
+    unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
@@ -195,27 +195,15 @@ int main()
     // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() *  sizeof(GL_FLOAT), vertices.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 6, (void*)0);
     glEnableVertexAttribArray(0);
 
     // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-    glBindBuffer(GL_ARRAY_BUFFER, 0); 
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // For colors
-    glGenBuffers(1, &VBO2);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-    glBufferData(GL_ARRAY_BUFFER, 
-                 vertexColors.size() * sizeof(GL_FLOAT),
-                 vertexColors.data(),
-                 GL_STATIC_DRAW);
-    
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,
-                          3, // r,g,b
-                          GL_FLOAT,
-                          GL_FALSE,
-                          0, // stride
-                          (void*)0);    
+    glVertexAttribPointer(1, 3, GL_FLOAT,GL_FALSE, sizeof(GL_FLOAT) * 6, (void*)(sizeof(GL_FLOAT) * 3));    
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
@@ -257,7 +245,6 @@ int main()
     // ------------------------------------------------------------------------
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &VBO2);
     glDeleteProgram(shaderProgram);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
@@ -310,15 +297,32 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<Vertex
             iss >> v3 >> slash >> slash >> trash;
             // Assuming vertices are 1-indexed in .obj files, convert to 0-indexed
             v1--; v2--; v3--;
+            // vertex 1 location
             faceData.push_back(vertices[v1].x);
             faceData.push_back(vertices[v1].y);
             faceData.push_back(vertices[v1].z);
+            // vertex 1 color
+            faceData.push_back(1.0f);
+            faceData.push_back(0.0f);
+            faceData.push_back(0.0f);
+
+            // vertex 2 location
             faceData.push_back(vertices[v2].x);
             faceData.push_back(vertices[v2].y);
             faceData.push_back(vertices[v2].z);
+            // vertex 2 color
+            faceData.push_back(0.0f);
+            faceData.push_back(1.0f);
+            faceData.push_back(0.0f);
+
+            // vertex 3 location
             faceData.push_back(vertices[v3].x);
             faceData.push_back(vertices[v3].y);
             faceData.push_back(vertices[v3].z);
+            // vertex 3 color
+            faceData.push_back(0.0f);
+            faceData.push_back(0.0f);
+            faceData.push_back(1.0f);
         }
     }
     file.close();
