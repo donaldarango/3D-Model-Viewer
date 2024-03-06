@@ -19,6 +19,14 @@
 #include <vector>
 #include <algorithm>
 
+// GLOBAL VARIABLES
+float X_OFFSET = 0.0f;
+float Y_OFFSET = 0.0f;
+float X_ROTATE = 0.0f;
+float Y_ROTATE = 0.0f;
+float Z_ROTATE = 0.0f;
+float SCALE = 1.0f;
+
 struct Vertex {
     float x, y, z;
 };
@@ -26,6 +34,7 @@ struct Vertex {
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<Vertex>& vertices, size_t& numVertices);
+float normalize(float value, float minVal, float maxVal);
 
 // settings
 const unsigned int SCR_WIDTH = 800;
@@ -35,12 +44,13 @@ const unsigned int SCR_HEIGHT = 600;
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;\n"
     "layout (location = 1) in vec3 vertexColors;\n"
-    "uniform mat4 model;\n"
+    "uniform mat4 u_modelMatrix;\n"
     "out vec3 v_vertexColors;\n"
     "void main()\n"
     "{\n"
     "   v_vertexColors = vertexColors;\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "   vec4 newPosition = u_modelMatrix * vec4(aPos, 1.0f);\n"
+    "   gl_Position = vec4(newPosition.x, newPosition.y, newPosition.z, 1.0f);\n"
     "}\0";
 // const char *vertexShaderSource = "#version 330 core\n"
 //     "layout (location = 0) in vec3 aPos;\n"
@@ -55,6 +65,10 @@ const char *fragmentShaderSource = "#version 330 core\n"
     "{\n"
     "   FragColor = vec4(v_vertexColors.r, v_vertexColors.g, v_vertexColors.b, 1.0f);\n"
     "}\n\0";
+
+float normalize(float value, float minVal, float maxVal) {
+    return (value - minVal / (maxVal - minVal));
+}
 
 int main()
 {
@@ -124,54 +138,16 @@ int main()
     }
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
+    
 
-    glm::mat4 model(1.0f);
-    model = glm::scale(model, glm::vec3(0.5f,0.5f,0.5f));
-    std::cout << glm::to_string(model[0]) << std::endl;
-    std::cout << glm::to_string(model[1]) << std::endl;
-    std::cout << glm::to_string(model[2]) << std::endl;
-    std::cout << glm::to_string(model[3]) << std::endl;
-
-    // glm::vec4 worldspace_vec = (model * glm::vec4(-1.0f,-1.0f, 1.0f, 1.0f));
-    // std::cout << "\n";
-    // std::cout << "World Space" << std::endl;
-    // std::cout << glm::to_string(worldspace_vec) << std::endl;
-
-    // GLuint location = glGetUniformLocation(shaderProgram, "model");
-    // glUniformMatrix4fv(location, 1, false, glm::value_ptr(model));
-
-    std::string directory = "data/";
+    // std::string directory = "data/";
     // Implement user input to read filename
-    std::string filename = "cube.obj";
-    std::string filepath = directory + filename;
+    // std::string filename = "dolphins.obj";
+    // std::string filepath = directory + filename;
+    std::string filepath = "/Users/donny/Documents/Model Transformations/data/head.obj";
     std::vector<Vertex> verticesVector;
     size_t numVertices = 0;
     std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices);
-
-    // if (faceData) {
-    //     std::cout << "Number of vertices: " << numVertices << std::endl;
-    //     std::cout << "Number of faces: " << numFaces << std::endl;
-    //     std::cout << "Face data:" << std::endl;
-    //     for (size_t i = 0; i < numFaces * 9; ++i) {
-    //         std::cout << faceData.at(i) << " ";
-    //         if ((i + 1) % 9 == 0)
-    //             std::cout << std::endl;
-    //     }
-    // }
-    
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    // float vertices[] = {
-    //     -0.5f, -.25f, 0.0f, // left  
-    //      0.5f, -.75f, 0.0f, // right 
-    //      0.0f,  0.5f, 0.0f, // top   
-
-    //     -0.5f, -0.5f, 0.0f, // left  
-    //      0.5f, -0.5f, 0.0f, // right 
-    //      0.0f, -1.0f, 0.0f  // bottom
-    // };
-    // unsigned int numVertices = sizeof(vertices)/3;
 
 
     unsigned int VBO, VAO;
@@ -202,7 +178,7 @@ int main()
     glDisableVertexAttribArray(1);
 
     // uncomment this call to draw in wireframe polygons.
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // render loop
     // -----------
@@ -219,6 +195,23 @@ int main()
 
         // draw our first triangle
         glUseProgram(shaderProgram);
+
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(X_OFFSET, Y_OFFSET, 0.0f));
+        model = glm::rotate(model, glm::radians(X_ROTATE), glm::vec3(1,0,0)); // x-axis rotation
+        model = glm::rotate(model, glm::radians(Y_ROTATE), glm::vec3(0,1,0)); // y-axis rotation
+        model = glm::rotate(model, glm::radians(Z_ROTATE), glm::vec3(0,0,1)); // z-axis rotation
+        model = glm::scale(model, glm::vec3(SCALE, SCALE, SCALE)); // uniform scaling
+
+        GLint modelLocation = glGetUniformLocation(shaderProgram, "u_modelMatrix");
+    
+        if(modelLocation >= 0) {
+            glUniformMatrix4fv(modelLocation, 1, false, glm::value_ptr(model));
+        }
+        else {
+            exit(EXIT_FAILURE);
+            std::cout << "could not find u_modelMatrix" << std::endl;
+        }
+
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         // glDrawArrays(GL_TRIANGLES, 0, numVertices); 
         glDrawArrays(GL_TRIANGLES, 0, vertices.size()); 
@@ -248,6 +241,64 @@ void processInput(GLFWwindow *window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    
+    // TRANSLATION
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+        X_OFFSET += 0.01f;
+        std::cout << "x offset: " << X_OFFSET << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+        X_OFFSET -= 0.01f;
+        std::cout << "x offset: " << X_OFFSET << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        Y_OFFSET += 0.01f;
+        std::cout << "y offset: " << Y_OFFSET << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        Y_OFFSET -= 0.01f;
+        std::cout << "y offset: " << Y_OFFSET << std::endl;
+    }
+
+    // ROTATION
+    // X-AXIS
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        X_ROTATE += 1.0f;
+        std::cout << "x rotate: " << X_ROTATE << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+         X_ROTATE -= 1.0f;
+        std::cout << "x rotate: " << X_ROTATE << std::endl;
+    }
+    // Y-AXIS
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        Y_ROTATE -= 1.0f;
+        std::cout << "y rotate: " << Y_ROTATE << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        Y_ROTATE += 1.0f;
+        std::cout << "y rotate: " << Y_ROTATE << std::endl;
+    }
+    // Z-AXIS
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        Z_ROTATE -= 1.0f;
+        std::cout << "z rotate: " << Z_ROTATE << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        Z_ROTATE += 1.0f;
+        std::cout << "z rotate: " << Z_ROTATE << std::endl;
+    }
+
+    // SCALING
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+        SCALE -= 0.0001f;
+        std::cout << "scale: " << SCALE << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+        SCALE += 0.0001f;
+        std::cout << "scale: " << SCALE << std::endl;
+    }
+        
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -275,15 +326,25 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<Vertex
 
         if (prefix == "v") {
             Vertex vertex;
-            iss >> vertex.x >> vertex.y >> vertex.z;
+            float x,y,z;
+            iss >> x >> y >> z;
+
+            // normalize the values to fit within the viewport
+            vertex.x = normalize(x, -1.0f, 1.0f);
+            vertex.y = normalize(y, -1.0f, 1.0f);
+            vertex.z = normalize(z, -1.0f, 1.0f);
+            
             vertices.push_back(vertex);
             numVertices++;
         } else if (prefix == "f") {
             int v1, v2, v3;
             char slash, trash;
-            iss >> v1 >> slash >> slash >> trash;
-            iss >> v2 >> slash >> slash >> trash;
-            iss >> v3 >> slash >> slash >> trash;
+            // iss >> v1 >> slash >> trash >> slash >> trash;
+            // iss >> v2 >> slash >> trash >> slash >> trash;
+            // iss >> v3 >> slash >> trash >> slash >> trash;
+            iss >> v1;
+            iss >> v2;
+            iss >> v3;
             // Assuming vertices are 1-indexed in .obj files, convert to 0-indexed
             v1--; v2--; v3--;
             // vertex 1 location
@@ -291,27 +352,35 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<Vertex
             faceData.push_back(vertices[v1].y);
             faceData.push_back(vertices[v1].z);
             // vertex 1 color
-            faceData.push_back(1.0f);
-            faceData.push_back(0.0f);
-            faceData.push_back(0.0f);
-
+            // faceData.push_back(1.0f);
+            // faceData.push_back(0.0f);
+            // faceData.push_back(0.0f);
+            faceData.push_back(vertices[v1].x);
+            faceData.push_back(vertices[v1].y);
+            faceData.push_back(vertices[v1].z);
             // vertex 2 location
             faceData.push_back(vertices[v2].x);
             faceData.push_back(vertices[v2].y);
             faceData.push_back(vertices[v2].z);
             // vertex 2 color
-            faceData.push_back(0.0f);
-            faceData.push_back(1.0f);
-            faceData.push_back(0.0f);
+            // faceData.push_back(0.0f);
+            // faceData.push_back(1.0f);
+            // faceData.push_back(0.0f);
+            faceData.push_back(vertices[v2].x);
+            faceData.push_back(vertices[v2].y);
+            faceData.push_back(vertices[v2].z);
 
             // vertex 3 location
             faceData.push_back(vertices[v3].x);
             faceData.push_back(vertices[v3].y);
             faceData.push_back(vertices[v3].z);
             // vertex 3 color
-            faceData.push_back(0.0f);
-            faceData.push_back(0.0f);
-            faceData.push_back(1.0f);
+            // faceData.push_back(0.0f);
+            // faceData.push_back(0.0f);
+            // faceData.push_back(1.0f);
+            faceData.push_back(vertices[v3].x);
+            faceData.push_back(vertices[v3].y);
+            faceData.push_back(vertices[v3].z);
         }
     }
     file.close();
