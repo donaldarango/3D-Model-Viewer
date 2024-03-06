@@ -18,6 +18,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <regex>
 
 // GLOBAL VARIABLES
 float X_OFFSET = 0.0f;
@@ -27,47 +28,31 @@ float Y_ROTATE = 0.0f;
 float Z_ROTATE = 0.0f;
 float SCALE = 1.0f;
 
-struct Vertex {
-    float x, y, z;
-};
-
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<Vertex>& vertices, size_t& numVertices);
-float normalize(float value, float minVal, float maxVal);
+std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices);
+std::string LoadShaderAsString(const std::string& filename);
+
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 
-const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "layout (location = 1) in vec3 vertexColors;\n"
-    "uniform mat4 u_modelMatrix;\n"
-    "out vec3 v_vertexColors;\n"
-    "void main()\n"
-    "{\n"
-    "   v_vertexColors = vertexColors;\n"
-    "   vec4 newPosition = u_modelMatrix * vec4(aPos, 1.0f);\n"
-    "   gl_Position = vec4(newPosition.x, newPosition.y, newPosition.z, 1.0f);\n"
-    "}\0";
-// const char *vertexShaderSource = "#version 330 core\n"
-//     "layout (location = 0) in vec3 aPos;\n"
-//     "void main()\n"
-//     "{\n"
-//     "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-//     "}\0";
-const char *fragmentShaderSource = "#version 330 core\n"
-    "in vec3 v_vertexColors;\n"
-    "out vec4 FragColor;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = vec4(v_vertexColors.r, v_vertexColors.g, v_vertexColors.b, 1.0f);\n"
-    "}\n\0";
+std::string LoadShaderAsString(const std::string& filepath) {
+    std::string result = "";
 
-float normalize(float value, float minVal, float maxVal) {
-    return (value - minVal / (maxVal - minVal));
+    std::string line;
+    std::ifstream myFile(filepath.c_str());
+
+    if (myFile.is_open()){
+        while (std::getline(myFile, line)){
+            result += line + '\n';
+        }
+        myFile.close();
+    }
+
+    return result;
 }
 
 int main()
@@ -98,9 +83,14 @@ int main()
     // // glew: load all OpenGL function pointers
     glewInit();
 
-
     // build and compile our shader program
     // ------------------------------------
+    std::string vertexShaderString = LoadShaderAsString("shaders/source.vs");
+    const char* vertexShaderSource = vertexShaderString.c_str();
+
+    std::string fragmentShaderString = LoadShaderAsString("shaders/source.fs");
+    const char* fragmentShaderSource = fragmentShaderString.c_str();
+
     // vertex shader
     unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -125,6 +115,7 @@ int main()
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
+
     // link shaders
     unsigned int shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
@@ -140,12 +131,13 @@ int main()
     glDeleteShader(fragmentShader);
     
 
-    // std::string directory = "data/";
+    std::string directory = "data/";
     // Implement user input to read filename
-    // std::string filename = "dolphins.obj";
-    // std::string filepath = directory + filename;
-    std::string filepath = "/Users/donny/Documents/Model Transformations/data/head.obj";
-    std::vector<Vertex> verticesVector;
+    std::string filename = "dolphins";
+    filename += ".obj";
+    std::string filepath = directory + filename;
+    // std::string filepath = "/Users/donny/Documents/Model Transformations/data/dolphins.obj";
+    std::vector<glm::vec3> verticesVector;
     size_t numVertices = 0;
     std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices);
 
@@ -291,11 +283,11 @@ void processInput(GLFWwindow *window)
 
     // SCALING
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
-        SCALE -= 0.0001f;
+        SCALE -= 0.01f;
         std::cout << "scale: " << SCALE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
-        SCALE += 0.0001f;
+        SCALE += 0.01f;
         std::cout << "scale: " << SCALE << std::endl;
     }
         
@@ -310,7 +302,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<Vertex>& vertices, size_t& numVertices) {    
+std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices) {    
+    vertices.clear();
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << filename << std::endl;
@@ -319,32 +312,32 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<Vertex
 
     std::vector<GLfloat> faceData;
     std::string line;
+
     while (std::getline(file, line)) {
         std::istringstream iss(line);
         std::string prefix;
+        float x,y,z;
+        std::string sv1, sv2, sv3;
+        int v1, v2, v3;
+        
         iss >> prefix;
-
         if (prefix == "v") {
-            Vertex vertex;
-            float x,y,z;
+            glm::vec3 vertex;
             iss >> x >> y >> z;
-
             // normalize the values to fit within the viewport
-            vertex.x = normalize(x, -1.0f, 1.0f);
-            vertex.y = normalize(y, -1.0f, 1.0f);
-            vertex.z = normalize(z, -1.0f, 1.0f);
-            
+            vertex.x = x;
+            vertex.y = y;
+            vertex.z = z;
+
+            // Scale the vector to be within -1 and 1
+            // vertex = glm::normalize(vertex);
+            // vertex = 2.0f * vertex - glm::vec3(1.0f);
+
             vertices.push_back(vertex);
             numVertices++;
         } else if (prefix == "f") {
-            int v1, v2, v3;
-            char slash, trash;
-            // iss >> v1 >> slash >> trash >> slash >> trash;
-            // iss >> v2 >> slash >> trash >> slash >> trash;
-            // iss >> v3 >> slash >> trash >> slash >> trash;
-            iss >> v1;
-            iss >> v2;
-            iss >> v3;
+            iss >> sv1 >> sv2 >> sv3;                         // FIRST, read into individual strings
+            v1 = stoi(sv1);  v2 = stoi(sv2);  v3 = stoi(sv3);
             // Assuming vertices are 1-indexed in .obj files, convert to 0-indexed
             v1--; v2--; v3--;
             // vertex 1 location
