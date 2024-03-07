@@ -27,6 +27,7 @@ float X_ROTATE = 0.0f;
 float Y_ROTATE = 0.0f;
 float Z_ROTATE = 0.0f;
 float SCALE = 1.0f;
+bool CPU_CALCULATIONS = false;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -66,6 +67,11 @@ int main()
     std::cout << "Enter filename: ";
     std::string filename = "";
     std::cin >> filename;
+
+    std::string response = "";
+    std::cout << "transform the geometry on CPU (y/n): ";
+    std::cin >> response;
+    CPU_CALCULATIONS = strcmp(response.c_str(), "y") == 0 ? true : false;
 
     // glfw: initialize and configure
     // ------------------------------
@@ -150,9 +156,6 @@ int main()
     size_t numVertices = 0;
     std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices);
 
-        std::cout << "vertices size: " << vertices.size() << std::endl;;
-
-
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -201,24 +204,27 @@ int main()
         model = glm::rotate(model, glm::radians(Z_ROTATE), glm::vec3(0,0,1)); // z-axis rotation
         model = glm::scale(model, glm::vec3(SCALE, SCALE, SCALE)); // uniform scaling
 
-        std::vector<float> vertexData;
-        for(int i = 0; i < numVertices; i++) {
-            glm::vec4 v(vertices[(i*6)], vertices[(i*6)+1], vertices[(i*6)+2], 1.0f);
-            glm::vec4 transform = model * v;
+        if (CPU_CALCULATIONS) {
+            std::vector<float> vertexData;
+            for(int i = 0; i < numVertices; i++) {
+                glm::vec4 v(vertices[(i*6)], vertices[(i*6)+1], vertices[(i*6)+2], 1.0f);
+                glm::vec4 transform = model * v;
 
-            // vertex data
-            vertexData.push_back(transform.x);
-            vertexData.push_back(transform.y);    
-            vertexData.push_back(transform.z);
+                // vertex data
+                vertexData.push_back(transform.x);
+                vertexData.push_back(transform.y);    
+                vertexData.push_back(transform.z);
 
-            // color data    
-            vertexData.push_back(vertices[(i*6)]);
-            vertexData.push_back(vertices[(i*6)+1]);    
-            vertexData.push_back(vertices[(i*6)+2]);
+                // color data    
+                vertexData.push_back(vertices[(i*6)]);
+                vertexData.push_back(vertices[(i*6)+1]);    
+                vertexData.push_back(vertices[(i*6)+2]);
+            }
+
+            model = glm::mat4(1.0f);
+            glBufferData(GL_ARRAY_BUFFER, vertexData.size() *  sizeof(GL_FLOAT), vertexData.data(), GL_STATIC_DRAW);
         }
-        std::cout << "vertexData size: " << vertexData.size() << std::endl;
 
-        model = glm::mat4(1.0f);
 
         GLint modelLocation = glGetUniformLocation(shaderProgram, "u_modelMatrix");
         if(modelLocation >= 0) {
@@ -228,8 +234,6 @@ int main()
             std::cout << "could not find u_modelMatrix" << std::endl;
             exit(EXIT_FAILURE);
         }
-
-        glBufferData(GL_ARRAY_BUFFER, vertexData.size() *  sizeof(GL_FLOAT), vertexData.data(), GL_STATIC_DRAW);
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         glDrawArrays(GL_TRIANGLES, 0, vertices.size()); 
