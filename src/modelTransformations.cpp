@@ -31,13 +31,12 @@ float SCALE = 1.0f;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices);
+void updateMinMax(float value, float &MIN, float &MAX);
 std::string LoadShaderAsString(const std::string& filename);
-
 
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-
 
 std::string LoadShaderAsString(const std::string& filepath) {
     std::string result = "";
@@ -55,8 +54,19 @@ std::string LoadShaderAsString(const std::string& filepath) {
     return result;
 }
 
+void updateMinMax(float value, float &min, float &max) {
+    if (value > max)
+        max = value;
+    if (value < min)
+        min = value;
+}
+
 int main()
 {
+    std::cout << "Enter filename: ";
+    std::string filename = "";
+    std::cin >> filename;
+
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
@@ -132,14 +142,15 @@ int main()
     
 
     std::string directory = "data/";
-    // Implement user input to read filename
-    std::string filename = "dolphins";
     filename += ".obj";
+    std::cout << "Opening: " << filename << std::endl;
     std::string filepath = directory + filename;
     // std::string filepath = "/Users/donny/Documents/Model Transformations/data/dolphins.obj";
     std::vector<glm::vec3> verticesVector;
     size_t numVertices = 0;
     std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices);
+
+        std::cout << "vertices size: " << vertices.size() << std::endl;;
 
 
     unsigned int VBO, VAO;
@@ -149,14 +160,10 @@ int main()
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() *  sizeof(GL_FLOAT), vertices.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 6, (void*)0);
     glEnableVertexAttribArray(0);
-
-    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-    // glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // For colors
     glEnableVertexAttribArray(1);
@@ -164,13 +171,13 @@ int main()
 
     // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
     // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    glBindVertexArray(0);
+    //glBindVertexArray(0);
 
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
+    // glDisableVertexAttribArray(0);
+    // glDisableVertexAttribArray(1);
 
     // uncomment this call to draw in wireframe polygons.
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // render loop
     // -----------
@@ -194,18 +201,37 @@ int main()
         model = glm::rotate(model, glm::radians(Z_ROTATE), glm::vec3(0,0,1)); // z-axis rotation
         model = glm::scale(model, glm::vec3(SCALE, SCALE, SCALE)); // uniform scaling
 
+        std::vector<float> vertexData;
+        for(int i = 0; i < numVertices; i++) {
+            glm::vec4 v(vertices[(i*6)], vertices[(i*6)+1], vertices[(i*6)+2], 1.0f);
+            glm::vec4 transform = model * v;
+
+            // vertex data
+            vertexData.push_back(transform.x);
+            vertexData.push_back(transform.y);    
+            vertexData.push_back(transform.z);
+
+            // color data    
+            vertexData.push_back(vertices[(i*6)]);
+            vertexData.push_back(vertices[(i*6)+1]);    
+            vertexData.push_back(vertices[(i*6)+2]);
+        }
+        std::cout << "vertexData size: " << vertexData.size() << std::endl;
+
+        model = glm::mat4(1.0f);
+
         GLint modelLocation = glGetUniformLocation(shaderProgram, "u_modelMatrix");
-    
         if(modelLocation >= 0) {
             glUniformMatrix4fv(modelLocation, 1, false, glm::value_ptr(model));
-        }
+        }   
         else {
-            exit(EXIT_FAILURE);
             std::cout << "could not find u_modelMatrix" << std::endl;
+            exit(EXIT_FAILURE);
         }
 
+        glBufferData(GL_ARRAY_BUFFER, vertexData.size() *  sizeof(GL_FLOAT), vertexData.data(), GL_STATIC_DRAW);
+
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-        // glDrawArrays(GL_TRIANGLES, 0, numVertices); 
         glDrawArrays(GL_TRIANGLES, 0, vertices.size()); 
         // glBindVertexArray(0); // unbind our VA no need to unbind it every time 
  
@@ -237,58 +263,58 @@ void processInput(GLFWwindow *window)
     // TRANSLATION
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
         X_OFFSET += 0.01f;
-        std::cout << "x offset: " << X_OFFSET << std::endl;
+        // std::cout << "x offset: " << X_OFFSET << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
         X_OFFSET -= 0.01f;
-        std::cout << "x offset: " << X_OFFSET << std::endl;
+        // std::cout << "x offset: " << X_OFFSET << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
         Y_OFFSET += 0.01f;
-        std::cout << "y offset: " << Y_OFFSET << std::endl;
+        // std::cout << "y offset: " << Y_OFFSET << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
         Y_OFFSET -= 0.01f;
-        std::cout << "y offset: " << Y_OFFSET << std::endl;
+        // std::cout << "y offset: " << Y_OFFSET << std::endl;
     }
 
     // ROTATION
     // X-AXIS
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         X_ROTATE += 1.0f;
-        std::cout << "x rotate: " << X_ROTATE << std::endl;
+        // std::cout << "x rotate: " << X_ROTATE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
          X_ROTATE -= 1.0f;
-        std::cout << "x rotate: " << X_ROTATE << std::endl;
+        // std::cout << "x rotate: " << X_ROTATE << std::endl;
     }
     // Y-AXIS
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         Y_ROTATE -= 1.0f;
-        std::cout << "y rotate: " << Y_ROTATE << std::endl;
+        // std::cout << "y rotate: " << Y_ROTATE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         Y_ROTATE += 1.0f;
-        std::cout << "y rotate: " << Y_ROTATE << std::endl;
+        // std::cout << "y rotate: " << Y_ROTATE << std::endl;
     }
     // Z-AXIS
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
         Z_ROTATE -= 1.0f;
-        std::cout << "z rotate: " << Z_ROTATE << std::endl;
+        // std::cout << "z rotate: " << Z_ROTATE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
         Z_ROTATE += 1.0f;
-        std::cout << "z rotate: " << Z_ROTATE << std::endl;
+        // std::cout << "z rotate: " << Z_ROTATE << std::endl;
     }
 
     // SCALING
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
         SCALE -= 0.01f;
-        std::cout << "scale: " << SCALE << std::endl;
+        // std::cout << "scale: " << SCALE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
         SCALE += 0.01f;
-        std::cout << "scale: " << SCALE << std::endl;
+        // std::cout << "scale: " << SCALE << std::endl;
     }
         
 }
@@ -307,11 +333,16 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << filename << std::endl;
+        exit(EXIT_FAILURE);
         return std::vector<GLfloat>();
     }
 
     std::vector<GLfloat> faceData;
+    std::vector<glm::vec3> normalizedVertices;
     std::string line;
+    float max = FLT_MIN;
+    float min = FLT_MAX;
+    bool normalized = false;
 
     while (std::getline(file, line)) {
         std::istringstream iss(line);
@@ -324,56 +355,66 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
         if (prefix == "v") {
             glm::vec3 vertex;
             iss >> x >> y >> z;
-            // normalize the values to fit within the viewport
+            updateMinMax(x, min, max);
+            updateMinMax(y, min, max);
+            updateMinMax(z, min, max);
             vertex.x = x;
             vertex.y = y;
             vertex.z = z;
 
-            // Scale the vector to be within -1 and 1
-            // vertex = glm::normalize(vertex);
-            // vertex = 2.0f * vertex - glm::vec3(1.0f);
-
             vertices.push_back(vertex);
-            numVertices++;
         } else if (prefix == "f") {
-            iss >> sv1 >> sv2 >> sv3;                         // FIRST, read into individual strings
+            if (!normalized) {
+                 // normalize all of the vectors to be within -1 and 1
+                for (glm::vec3 v: vertices) {
+                    v.x = (v.x - min) / (max - min);
+                    v.y = (v.y - min) / (max - min);
+                    v.z = (v.z - min) / (max - min);
+
+                    normalizedVertices.push_back(v);
+                }
+                normalized = true;
+            }
+            iss >> sv1 >> sv2 >> sv3;
             v1 = stoi(sv1);  v2 = stoi(sv2);  v3 = stoi(sv3);
             // Assuming vertices are 1-indexed in .obj files, convert to 0-indexed
             v1--; v2--; v3--;
             // vertex 1 location
-            faceData.push_back(vertices[v1].x);
-            faceData.push_back(vertices[v1].y);
-            faceData.push_back(vertices[v1].z);
+            faceData.push_back(normalizedVertices[v1].x);
+            faceData.push_back(normalizedVertices[v1].y);
+            faceData.push_back(normalizedVertices[v1].z);
             // vertex 1 color
             // faceData.push_back(1.0f);
             // faceData.push_back(0.0f);
             // faceData.push_back(0.0f);
-            faceData.push_back(vertices[v1].x);
-            faceData.push_back(vertices[v1].y);
-            faceData.push_back(vertices[v1].z);
+            faceData.push_back(normalizedVertices[v1].x);
+            faceData.push_back(normalizedVertices[v1].y);
+            faceData.push_back(normalizedVertices[v1].z);
             // vertex 2 location
-            faceData.push_back(vertices[v2].x);
-            faceData.push_back(vertices[v2].y);
-            faceData.push_back(vertices[v2].z);
+            faceData.push_back(normalizedVertices[v2].x);
+            faceData.push_back(normalizedVertices[v2].y);
+            faceData.push_back(normalizedVertices[v2].z);
             // vertex 2 color
             // faceData.push_back(0.0f);
             // faceData.push_back(1.0f);
             // faceData.push_back(0.0f);
-            faceData.push_back(vertices[v2].x);
-            faceData.push_back(vertices[v2].y);
-            faceData.push_back(vertices[v2].z);
+            faceData.push_back(normalizedVertices[v2].x);
+            faceData.push_back(normalizedVertices[v2].y);
+            faceData.push_back(normalizedVertices[v2].z);
 
             // vertex 3 location
-            faceData.push_back(vertices[v3].x);
-            faceData.push_back(vertices[v3].y);
-            faceData.push_back(vertices[v3].z);
+            faceData.push_back(normalizedVertices[v3].x);
+            faceData.push_back(normalizedVertices[v3].y);
+            faceData.push_back(normalizedVertices[v3].z);
             // vertex 3 color
             // faceData.push_back(0.0f);
             // faceData.push_back(0.0f);
             // faceData.push_back(1.0f);
-            faceData.push_back(vertices[v3].x);
-            faceData.push_back(vertices[v3].y);
-            faceData.push_back(vertices[v3].z);
+            faceData.push_back(normalizedVertices[v3].x);
+            faceData.push_back(normalizedVertices[v3].y);
+            faceData.push_back(normalizedVertices[v3].z);
+
+            numVertices += 3;
         }
     }
     file.close();
