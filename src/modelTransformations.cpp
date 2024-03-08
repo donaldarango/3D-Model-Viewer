@@ -2,7 +2,6 @@
 #include <GL/glew.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -27,8 +26,9 @@ float X_ROTATE = 0.0f;
 float Y_ROTATE = 0.0f;
 float Z_ROTATE = 0.0f;
 float SCALE = 1.0f;
-bool CPU_CALCULATIONS = false;
+bool GPU_CALCULATIONS = true;
 
+// functions
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices);
@@ -69,9 +69,9 @@ int main()
     std::cin >> filename;
 
     std::string response = "";
-    std::cout << "transform the geometry on CPU (y/n): ";
+    std::cout << "transform the geometry on GPU? (y/n): ";
     std::cin >> response;
-    CPU_CALCULATIONS = strcmp(response.c_str(), "y") == 0 ? true : false;
+    GPU_CALCULATIONS = strcmp(response.c_str(), "y") == 0 ? true : false;
 
     // glfw: initialize and configure
     // ------------------------------
@@ -193,7 +193,8 @@ int main()
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // draw our first triangle
         glUseProgram(shaderProgram);
@@ -204,7 +205,7 @@ int main()
         model = glm::rotate(model, glm::radians(Z_ROTATE), glm::vec3(0,0,1)); // z-axis rotation
         model = glm::scale(model, glm::vec3(SCALE, SCALE, SCALE)); // uniform scaling
 
-        if (CPU_CALCULATIONS) {
+        if (!GPU_CALCULATIONS) {
             std::vector<float> vertexData;
             for(int i = 0; i < numVertices; i++) {
                 glm::vec4 v(vertices[(i*6)], vertices[(i*6)+1], vertices[(i*6)+2], 1.0f);
@@ -371,10 +372,9 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             if (!normalized) {
                  // normalize all of the vectors to be within -1 and 1
                 for (glm::vec3 v: vertices) {
-                    v.x = (v.x - min) / (max - min);
-                    v.y = (v.y - min) / (max - min);
-                    v.z = (v.z - min) / (max - min);
-
+                    v.x = ((v.x - min) / (max - min)) * (1 - (-1)) - 1;
+                    v.y = (v.y - min) / (max - min) * (1 - (-1)) - 1;
+                    v.z = (v.z - min) / (max - min) * (1 - (-1)) - 1;
                     normalizedVertices.push_back(v);
                 }
                 normalized = true;
