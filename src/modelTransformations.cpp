@@ -17,7 +17,6 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
-#include <regex>
 
 // GLOBAL VARIABLES
 float X_OFFSET = 0.0f;
@@ -67,6 +66,7 @@ int main()
     std::cout << "Enter filename: ";
     std::string filename = "";
     std::cin >> filename;
+    filename += ".obj";
 
     std::string response = "";
     std::cout << "transform the geometry on GPU? (y/n): ";
@@ -148,10 +148,8 @@ int main()
     
 
     std::string directory = "data/";
-    filename += ".obj";
     std::cout << "Opening: " << filename << std::endl;
     std::string filepath = directory + filename;
-    // std::string filepath = "/Users/donny/Documents/Model Transformations/data/dolphins.obj";
     std::vector<glm::vec3> verticesVector;
     size_t numVertices = 0;
     std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices);
@@ -171,13 +169,6 @@ int main()
     // For colors
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT,GL_FALSE, sizeof(GL_FLOAT) * 6, (void*)(sizeof(GL_FLOAT) * 3));    
-
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    //glBindVertexArray(0);
-
-    // glDisableVertexAttribArray(0);
-    // glDisableVertexAttribArray(1);
 
     // uncomment this call to draw in wireframe polygons.
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -199,12 +190,15 @@ int main()
         // draw our first triangle
         glUseProgram(shaderProgram);
 
+        // creating model transformation matrix
         glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(X_OFFSET, Y_OFFSET, 0.0f));
         model = glm::rotate(model, glm::radians(X_ROTATE), glm::vec3(1,0,0)); // x-axis rotation
         model = glm::rotate(model, glm::radians(Y_ROTATE), glm::vec3(0,1,0)); // y-axis rotation
         model = glm::rotate(model, glm::radians(Z_ROTATE), glm::vec3(0,0,1)); // z-axis rotation
         model = glm::scale(model, glm::vec3(SCALE, SCALE, SCALE)); // uniform scaling
 
+
+        // update vertex data for CPU calculations if requested
         if (!GPU_CALCULATIONS) {
             std::vector<float> vertexData;
             for(int i = 0; i < numVertices; i++) {
@@ -227,6 +221,7 @@ int main()
         }
 
 
+        // pass model matrix data to the GPU
         GLint modelLocation = glGetUniformLocation(shaderProgram, "u_modelMatrix");
         if(modelLocation >= 0) {
             glUniformMatrix4fv(modelLocation, 1, false, glm::value_ptr(model));
@@ -287,39 +282,31 @@ void processInput(GLFWwindow *window)
     // X-AXIS
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         X_ROTATE += 1.0f;
-        // std::cout << "x rotate: " << X_ROTATE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
          X_ROTATE -= 1.0f;
-        // std::cout << "x rotate: " << X_ROTATE << std::endl;
     }
     // Y-AXIS
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         Y_ROTATE -= 1.0f;
-        // std::cout << "y rotate: " << Y_ROTATE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         Y_ROTATE += 1.0f;
-        // std::cout << "y rotate: " << Y_ROTATE << std::endl;
     }
     // Z-AXIS
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
         Z_ROTATE -= 1.0f;
-        // std::cout << "z rotate: " << Z_ROTATE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
         Z_ROTATE += 1.0f;
-        // std::cout << "z rotate: " << Z_ROTATE << std::endl;
     }
 
     // SCALING
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
         SCALE -= 0.01f;
-        // std::cout << "scale: " << SCALE << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
         SCALE += 0.01f;
-        // std::cout << "scale: " << SCALE << std::endl;
     }
         
 }
@@ -381,6 +368,7 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             }
             iss >> sv1 >> sv2 >> sv3;
             v1 = stoi(sv1);  v2 = stoi(sv2);  v3 = stoi(sv3);
+            
             // Assuming vertices are 1-indexed in .obj files, convert to 0-indexed
             v1--; v2--; v3--;
             // vertex 1 location
@@ -388,20 +376,15 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v1].y);
             faceData.push_back(normalizedVertices[v1].z);
             // vertex 1 color
-            // faceData.push_back(1.0f);
-            // faceData.push_back(0.0f);
-            // faceData.push_back(0.0f);
             faceData.push_back(normalizedVertices[v1].x);
             faceData.push_back(normalizedVertices[v1].y);
             faceData.push_back(normalizedVertices[v1].z);
+
             // vertex 2 location
             faceData.push_back(normalizedVertices[v2].x);
             faceData.push_back(normalizedVertices[v2].y);
             faceData.push_back(normalizedVertices[v2].z);
             // vertex 2 color
-            // faceData.push_back(0.0f);
-            // faceData.push_back(1.0f);
-            // faceData.push_back(0.0f);
             faceData.push_back(normalizedVertices[v2].x);
             faceData.push_back(normalizedVertices[v2].y);
             faceData.push_back(normalizedVertices[v2].z);
@@ -411,9 +394,6 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v3].y);
             faceData.push_back(normalizedVertices[v3].z);
             // vertex 3 color
-            // faceData.push_back(0.0f);
-            // faceData.push_back(0.0f);
-            // faceData.push_back(1.0f);
             faceData.push_back(normalizedVertices[v3].x);
             faceData.push_back(normalizedVertices[v3].y);
             faceData.push_back(normalizedVertices[v3].z);
