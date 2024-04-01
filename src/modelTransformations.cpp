@@ -21,6 +21,7 @@
 // GLOBAL VARIABLES
 float X_OFFSET = 0.0f;
 float Y_OFFSET = 0.0f;
+float Z_OFFSET = 0.0f;
 float X_ROTATE = 0.0f;
 float Y_ROTATE = 0.0f;
 float Z_ROTATE = 0.0f;
@@ -190,8 +191,24 @@ int main()
         // draw our first triangle
         glUseProgram(shaderProgram);
 
+        // perpspective model matrix
+        glm::mat4 perspective = glm::perspective(glm::radians(45.0f),
+                                                 (float)SCR_WIDTH / (float)SCR_HEIGHT,
+                                                 0.1f,
+                                                 100.0f);
+
+
+        GLint perpectiveLocation = glGetUniformLocation(shaderProgram, "u_Perspective");
+        if(perpectiveLocation >= 0) {
+            glUniformMatrix4fv(perpectiveLocation, 1, false, glm::value_ptr(perspective));
+        }   
+        else {
+            std::cout << "could not find u_Perspective" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
         // creating model transformation matrix
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(X_OFFSET, Y_OFFSET, 0.0f));
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(X_OFFSET, Y_OFFSET, Z_OFFSET));
         model = glm::rotate(model, glm::radians(X_ROTATE), glm::vec3(1,0,0)); // x-axis rotation
         model = glm::rotate(model, glm::radians(Y_ROTATE), glm::vec3(0,1,0)); // y-axis rotation
         model = glm::rotate(model, glm::radians(Z_ROTATE), glm::vec3(0,0,1)); // z-axis rotation
@@ -276,6 +293,14 @@ void processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
         Y_OFFSET -= 0.01f;
         // std::cout << "y offset: " << Y_OFFSET << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
+        Z_OFFSET += 0.5f;
+        std::cout << "z offset: " << Z_OFFSET << std::endl;
+    }
+    if (glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
+        Z_OFFSET -= 0.5f;
+        std::cout << "z offset: " << Z_OFFSET << std::endl;
     }
 
     // ROTATION
