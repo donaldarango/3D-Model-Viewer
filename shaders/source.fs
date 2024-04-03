@@ -13,5 +13,5 @@
     void main()
     {
       //  FragColor = vec4(v_vertexColors.r, v_vertexColors.g, v_vertexColors.b, 1.0f);
-      FragColor = vec4(vec3(linearizeDepth(gl_FragCoord.z) / far ), 1.0f);
+      FragColor = vec4(vec3(linearizeDepth(gl_FragCoord.z) / far), 1.0f);
     }

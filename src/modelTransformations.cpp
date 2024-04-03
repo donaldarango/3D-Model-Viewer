@@ -31,7 +31,7 @@ bool GPU_CALCULATIONS = true;
 // functions
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices);
+std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices, std::vector<glm::vec3>& normals);
 void updateMinMax(float value, float &MIN, float &MAX);
 std::string LoadShaderAsString(const std::string& filename);
 
@@ -152,8 +152,9 @@ int main()
     std::cout << "Opening: " << filename << std::endl;
     std::string filepath = directory + filename;
     std::vector<glm::vec3> verticesVector;
+    std::vector<glm::vec3> normals;
     size_t numVertices = 0;
-    std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices);
+    std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices, normals);
 
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
@@ -164,12 +165,16 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() *  sizeof(GL_FLOAT), vertices.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 6, (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 9, (void*)0);
     glEnableVertexAttribArray(0);
 
     // For colors
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT,GL_FALSE, sizeof(GL_FLOAT) * 6, (void*)(sizeof(GL_FLOAT) * 3));    
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 9, (void*)(sizeof(GL_FLOAT) * 3));    
+
+    // For normals
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 9, (void*)(sizeof(GL_FLOAT) * 6));    
 
     // uncomment this call to draw in wireframe polygons.
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -231,6 +236,11 @@ int main()
                 vertexData.push_back(vertices[(i*6)]);
                 vertexData.push_back(vertices[(i*6)+1]);    
                 vertexData.push_back(vertices[(i*6)+2]);
+
+                // normal data
+                vertexData.push_back(vertices[(i*9)]);
+                vertexData.push_back(vertices[(i*9)+1]);    
+                vertexData.push_back(vertices[(i*9)+2]);
             }
 
             model = glm::mat4(1.0f);
@@ -345,8 +355,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices) {    
+std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices, std::vector<glm::vec3>& normals) {    
     vertices.clear();
+    normals.clear();
+
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << filename << std::endl;
@@ -382,7 +394,13 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             vertices.push_back(vertex);
         } 
         else if (prefix == "vn") {
-            std::cout<< "normal found" << std::endl;
+            glm::vec3 normal;
+            iss >> x >> y >> z;
+            normal.x = x;
+            normal.y = y;
+            normal.z = z;
+
+            normals.push_back(normal);
         }
         else if (prefix == "f") {
             if (!normalized) {
@@ -396,7 +414,6 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
                 normalized = true;
             }
 
-            
             iss >> sv1 >> sv2 >> sv3;
             v1 = stoi(sv1);  v2 = stoi(sv2);  v3 = stoi(sv3);
             
@@ -410,6 +427,10 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v1].x);
             faceData.push_back(normalizedVertices[v1].y);
             faceData.push_back(normalizedVertices[v1].z);
+            // vertex 1 normal
+            faceData.push_back(normals[v1].x);
+            faceData.push_back(normals[v1].y);
+            faceData.push_back(normals[v1].z);
 
             // vertex 2 location
             faceData.push_back(normalizedVertices[v2].x);
@@ -419,6 +440,10 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v2].x);
             faceData.push_back(normalizedVertices[v2].y);
             faceData.push_back(normalizedVertices[v2].z);
+            // vertex 2 normal
+            faceData.push_back(normals[v2].x);
+            faceData.push_back(normals[v2].y);
+            faceData.push_back(normals[v2].z);
 
             // vertex 3 location
             faceData.push_back(normalizedVertices[v3].x);
@@ -428,6 +453,10 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v3].x);
             faceData.push_back(normalizedVertices[v3].y);
             faceData.push_back(normalizedVertices[v3].z);
+            // vertex 3 normal
+            faceData.push_back(normals[v3].x);
+            faceData.push_back(normals[v3].y);
+            faceData.push_back(normals[v3].z);
 
             numVertices += 3;
         }
