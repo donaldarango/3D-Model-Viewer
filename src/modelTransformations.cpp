@@ -380,7 +380,11 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             vertex.z = z;
 
             vertices.push_back(vertex);
-        } else if (prefix == "f") {
+        } 
+        else if (prefix == "vn") {
+            std::cout<< "normal found" << std::endl;
+        }
+        else if (prefix == "f") {
             if (!normalized) {
                  // normalize all of the vectors to be within -1 and 1
                 for (glm::vec3 v: vertices) {
@@ -391,6 +395,8 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
                 }
                 normalized = true;
             }
+
+            
             iss >> sv1 >> sv2 >> sv3;
             v1 = stoi(sv1);  v2 = stoi(sv2);  v3 = stoi(sv3);
             
