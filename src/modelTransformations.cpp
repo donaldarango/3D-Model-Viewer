@@ -10,6 +10,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp> 
 #include <glm/gtx/string_cast.hpp>
+#include "objLoader.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -154,7 +155,11 @@ int main()
     std::vector<glm::vec3> verticesVector;
     std::vector<glm::vec3> normals;
     size_t numVertices = 0;
-    std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices, normals);
+
+    glm::mat4 preTransform(1.0f);
+
+    //std::vector<GLfloat> vertices = readObjFile(filepath, verticesVector, numVertices, normals);
+    std::vector<float> vertices = load_model_from_file(filepath, preTransform, numVertices);
 
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
@@ -165,6 +170,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() *  sizeof(GL_FLOAT), vertices.data(), GL_STATIC_DRAW);
 
+    // For vertices
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT) * 9, (void*)0);
     glEnableVertexAttribArray(0);
 
@@ -178,6 +184,19 @@ int main()
 
     // uncomment this call to draw in wireframe polygons.
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+
+    // create uniform light position variable
+    glm::vec3 lightPos = glm::vec3(0.0f, 10.0f, 1.0f);
+
+    GLint lightPosLocation = glGetUniformLocation(shaderProgram, "u_LightPos");
+    if(lightPosLocation >= 0) {
+        glUniformMatrix4fv(lightPosLocation, 1, false, glm::value_ptr(lightPos));
+    }   
+    else {
+        std::cout << "could not find u_LightPos" << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     // render loop
     // -----------
@@ -202,13 +221,12 @@ int main()
                                                  0.1f,
                                                  100.0f);
 
-
-        GLint perpectiveLocation = glGetUniformLocation(shaderProgram, "u_Perspective");
+        GLint perpectiveLocation = glGetUniformLocation(shaderProgram, "u_Projection");
         if(perpectiveLocation >= 0) {
             glUniformMatrix4fv(perpectiveLocation, 1, false, glm::value_ptr(perspective));
         }   
         else {
-            std::cout << "could not find u_Perspective" << std::endl;
+            std::cout << "could not find u_Projection" << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -249,14 +267,16 @@ int main()
 
 
         // pass model matrix data to the GPU
-        GLint modelLocation = glGetUniformLocation(shaderProgram, "u_modelMatrix");
+        GLint modelLocation = glGetUniformLocation(shaderProgram, "u_Model");
         if(modelLocation >= 0) {
             glUniformMatrix4fv(modelLocation, 1, false, glm::value_ptr(model));
         }   
         else {
-            std::cout << "could not find u_modelMatrix" << std::endl;
+            std::cout << "could not find u_Model" << std::endl;
             exit(EXIT_FAILURE);
         }
+
+
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
         glDrawArrays(GL_TRIANGLES, 0, vertices.size()); 
@@ -372,6 +392,7 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
     float max = FLT_MIN;
     float min = FLT_MAX;
     bool normalized = false;
+    bool containsNormals = false;
 
     while (std::getline(file, line)) {
         std::istringstream iss(line);
@@ -394,6 +415,9 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             vertices.push_back(vertex);
         } 
         else if (prefix == "vn") {
+            if (!containsNormals)
+                containsNormals = true;
+            
             glm::vec3 normal;
             iss >> x >> y >> z;
             normal.x = x;
@@ -428,10 +452,12 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v1].y);
             faceData.push_back(normalizedVertices[v1].z);
             // vertex 1 normal
-            faceData.push_back(normals[v1].x);
-            faceData.push_back(normals[v1].y);
-            faceData.push_back(normals[v1].z);
-
+            if (containsNormals) {
+                faceData.push_back(normals[v1].x);
+                faceData.push_back(normals[v1].y);
+                faceData.push_back(normals[v1].z);
+            }
+            
             // vertex 2 location
             faceData.push_back(normalizedVertices[v2].x);
             faceData.push_back(normalizedVertices[v2].y);
@@ -441,9 +467,11 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v2].y);
             faceData.push_back(normalizedVertices[v2].z);
             // vertex 2 normal
-            faceData.push_back(normals[v2].x);
-            faceData.push_back(normals[v2].y);
-            faceData.push_back(normals[v2].z);
+            if (containsNormals) {
+                faceData.push_back(normals[v2].x);
+                faceData.push_back(normals[v2].y);
+                faceData.push_back(normals[v2].z);
+            }
 
             // vertex 3 location
             faceData.push_back(normalizedVertices[v3].x);
@@ -454,14 +482,17 @@ std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::v
             faceData.push_back(normalizedVertices[v3].y);
             faceData.push_back(normalizedVertices[v3].z);
             // vertex 3 normal
-            faceData.push_back(normals[v3].x);
-            faceData.push_back(normals[v3].y);
-            faceData.push_back(normals[v3].z);
+            if (containsNormals) {
+                faceData.push_back(normals[v3].x);
+                faceData.push_back(normals[v3].y);
+                faceData.push_back(normals[v3].z);
+            }
 
             numVertices += 3;
         }
     }
     file.close();
     
+    std::cout << "Loaded .obj file" << std::endl;
     return faceData;
 }
