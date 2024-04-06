@@ -8,58 +8,88 @@ std::vector<float> load_model_from_file(std::string &filename, glm::mat4 preTran
 	
 	std::vector<float> vertices;
 
-	tinyobj::attrib_t attributes;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	std::string warning, error;
+    tinyobj::ObjReaderConfig reader_config;
+    // reader_config.mtl_search_path = "../data/"; // Path to material files
 
-    const char* c_filename = filename.c_str();
+    tinyobj::ObjReader reader;
 
-	if (!tinyobj::LoadObj(&attributes, &shapes, &materials, &warning, &error, c_filename)) {
-		std::cout << warning << error << '\n';
-	}
+    if (!reader.ParseFromFile(filename, reader_config)) {
+        if (!reader.Error().empty()) {
+            std::cerr << "TinyObjReader: " << reader.Error();
+        }
+        exit(1);
+    }
 
-	for (const auto& shape : shapes) {
-		for (const auto& index : shape.mesh.indices) {
+    if (!reader.Warning().empty()) {
+        std::cout << "TinyObjReader: " << reader.Warning();
+    }
 
-			glm::vec4 pos = {
-				attributes.vertices[3 * index.vertex_index],
-				attributes.vertices[3 * index.vertex_index + 1],
-				attributes.vertices[3 * index.vertex_index + 2],
-				1
-			};
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+    auto& materials = reader.GetMaterials();
 
-			pos = preTransform * pos;
+    // Loop over shapes
+	for (size_t s = 0; s < shapes.size(); s++) {
 
-			glm::vec3 normal = {
-				attributes.normals[3 * index.normal_index],
-				attributes.normals[3 * index.normal_index + 1],
-				attributes.normals[3 * index.normal_index + 2]
-			};
+        // Loop over faces(polygon)
+        size_t index_offset = 0;
+        for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
 
-			normal = glm::normalize(glm::mat3(preTransform) * normal);
+            // Loop over vertices in the face.
+            size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+		    for (size_t v = 0; v < fv; v++) {
+                tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
-            // set colors to be equal to pretransformed x,y,z of vertex
-			glm::vec3 colors = {
-                attributes.vertices[3 * index.vertex_index],
-				attributes.vertices[3 * index.vertex_index + 1],
-				attributes.vertices[3 * index.vertex_index + 2],
-            };
+                glm::vec4 pos = {
+                    attrib.vertices[3*size_t(idx.vertex_index)+0],
+                    attrib.vertices[3*size_t(idx.vertex_index)+1],
+                    attrib.vertices[3*size_t(idx.vertex_index)+2],
+                    1
+                };
 
-            // TO ADD: GENERATE VERTEX NORMALS BY TAKING CROSS PRODUCT, IF NO NORMALS IN .OBJ FILE
+                pos = preTransform * pos;
 
-			vertices.push_back(pos.x);
-			vertices.push_back(pos.y);
-			vertices.push_back(pos.z);
-            vertices.push_back(colors.r);
-            vertices.push_back(colors.g);
-            vertices.push_back(colors.b);
-			vertices.push_back(normal.x);
-			vertices.push_back(normal.y);
-			vertices.push_back(normal.z);
+                glm::vec3 normal;
+                if (idx.normal_index >= 0) { // if negative, no vertex normals
+                    normal = {
+                        attrib.normals[3 * idx.normal_index],
+                        attrib.normals[3 * idx.normal_index + 1],
+                        attrib.normals[3 * idx.normal_index + 2]
+                    };
+                }
+                else {
+                    normal = {
+                        0.0f,
+                        0.0f,
+                        0.0f
+                    };
+                }
 
-            numVertices += 3;
-		}
+                normal = glm::normalize(glm::mat3(preTransform) * normal);
+
+                // set colors to be equal to pretransformed x,y,z of vertex
+                glm::vec3 colors = {
+                    attrib.vertices[3 * idx.vertex_index],
+                    attrib.vertices[3 * idx.vertex_index + 1],
+                    attrib.vertices[3 * idx.vertex_index + 2],
+                };
+
+                vertices.push_back(pos.x);
+                vertices.push_back(pos.y);
+                vertices.push_back(pos.z);
+                vertices.push_back(colors.r);
+                vertices.push_back(colors.g);
+                vertices.push_back(colors.b);
+                vertices.push_back(normal.x);
+                vertices.push_back(normal.y);
+                vertices.push_back(normal.z);
+
+                numVertices += 3;
+		    }
+            index_offset += fv;
+
+            shapes[s].mesh.material_ids[f];
+        }
 	}
 
     std::cout << "finished loading object" << std::endl;
