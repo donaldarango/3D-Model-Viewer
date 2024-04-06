@@ -7,6 +7,8 @@
     uniform mat4 u_Projection; // perspective matrix
     uniform vec3 u_LightPos; 
 
+    out vec4 vertexPosition;
+
     void main()
     {
        vec3 garbage = u_LightPos;
@@ -15,5 +17,6 @@
       vec3 modelViewVertex = vec3(u_Model * vec4(a_Pos, 1.0)); // vertex pos in eye space
 
       // projection * model * position
-      gl_Position = u_Projection * vec4(modelViewVertex, 1.0);
-    }
+      vertexPosition = u_Projection * vec4(modelViewVertex, 1.0);
+      gl_Position = vertexPosition;
+    } 

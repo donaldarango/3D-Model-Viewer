@@ -69,9 +69,12 @@ std::vector<float> load_model_from_file(std::string &filename, glm::mat4 preTran
 
                 // set colors to be equal to pretransformed x,y,z of vertex
                 glm::vec3 colors = {
-                    attrib.vertices[3 * idx.vertex_index],
-                    attrib.vertices[3 * idx.vertex_index + 1],
-                    attrib.vertices[3 * idx.vertex_index + 2],
+                    // attrib.vertices[3 * idx.vertex_index],
+                    // attrib.vertices[3 * idx.vertex_index + 1],
+                    // attrib.vertices[3 * idx.vertex_index + 2],
+                    1.0,
+                    0.0,
+                    0.0
                 };
 
                 vertices.push_back(pos.x);

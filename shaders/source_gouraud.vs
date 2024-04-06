@@ -19,10 +19,13 @@
 
       vec3 lightVector = normalize(u_LightPos - modelViewVertex);
 
-      float diffuse = max(dot(modelViewNormal, lightVector), 0.1);
-      diffuse = diffuse * (1.0 / (1.0 + (0.25 * distance * distance)));
+      float ambient = 0.3;
 
-      v_vertexColors = a_Color * diffuse;
+      float diffuse = max(dot(modelViewNormal, lightVector), 0.1);
+      // diffuse = diffuse * (1.0 / (1.0 + (0.25 * distance * distance)));
+      diffuse = diffuse * (0.1);
+
+      v_vertexColors = a_Color * (diffuse + ambient);
 
       gl_Position = u_Projection * vec4(modelViewVertex, 1.0);  
       

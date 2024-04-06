@@ -104,14 +104,14 @@ int main()
     // build and compile our shader program
     // ------------------------------------
     // std::string vertexShaderString = LoadShaderAsString("shaders/source_gouraud.vs");
-    // std::string vertexShaderString = LoadShaderAsString("shaders/source_depth.vs");
-    std::string vertexShaderString = LoadShaderAsString("shaders/source_phong.vs");
+    std::string vertexShaderString = LoadShaderAsString("shaders/source_depth.vs");
+    // std::string vertexShaderString = LoadShaderAsString("shaders/source_phong.vs");
 
     const char* vertexShaderSource = vertexShaderString.c_str();
 
     // std::string fragmentShaderString = LoadShaderAsString("shaders/source_gouraud.fs");
-    // std::string fragmentShaderString = LoadShaderAsString("shaders/source_depth.fs");
-    std::string fragmentShaderString = LoadShaderAsString("shaders/source_phong.fs");
+    std::string fragmentShaderString = LoadShaderAsString("shaders/source_depth.fs");
+    // std::string fragmentShaderString = LoadShaderAsString("shaders/source_phong.fs");
 
     const char* fragmentShaderSource = fragmentShaderString.c_str();
 
@@ -193,7 +193,7 @@ int main()
 
 
     // create uniform light position variable
-    glm::vec3 lightPos = glm::vec3(0.0f, 10.0f, 1.0f);
+    glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
     GLint lightPosLocation = glGetUniformLocation(shaderProgram, "u_LightPos");
     if(lightPosLocation >= 0) {
@@ -216,16 +216,20 @@ int main()
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glEnable(GL_DEPTH_TEST);
+        glClearDepth(1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // draw our first triangle
         glUseProgram(shaderProgram);
 
+        float near = 0.1f;
+        float far = 100.0f;
+
         // perpspective model matrix
         glm::mat4 perspective = glm::perspective(glm::radians(45.0f),
                                                  (float)SCR_WIDTH / (float)SCR_HEIGHT,
-                                                 0.1f,
-                                                 100.0f);
+                                                 near,
+                                                 far);
 
         GLint perpectiveLocation = glGetUniformLocation(shaderProgram, "u_Projection");
         if(perpectiveLocation >= 0) {
@@ -245,26 +249,26 @@ int main()
 
 
         // update vertex data for CPU calculations if requested
+        std::vector<float> vertexData;
         if (!GPU_CALCULATIONS) {
-            std::vector<float> vertexData;
             for(int i = 0; i < numVertices; i++) {
-                glm::vec4 v(vertices[(i*6)], vertices[(i*6)+1], vertices[(i*6)+2], 1.0f);
+                glm::vec4 v(vertices[(i*9)], vertices[(i*9)+1], vertices[(i*9)+2], 1.0f);
                 glm::vec4 transform = model * v;
 
                 // vertex data
                 vertexData.push_back(transform.x);
-                vertexData.push_back(transform.y);    
+                vertexData.push_back(transform.y);
                 vertexData.push_back(transform.z);
 
                 // color data    
-                vertexData.push_back(vertices[(i*6)]);
-                vertexData.push_back(vertices[(i*6)+1]);    
-                vertexData.push_back(vertices[(i*6)+2]);
+                vertexData.push_back(vertices[(i*9)+3]);
+                vertexData.push_back(vertices[(i*9)+4]);    
+                vertexData.push_back(vertices[(i*9)+5]);
 
                 // normal data
-                vertexData.push_back(vertices[(i*9)]);
-                vertexData.push_back(vertices[(i*9)+1]);    
-                vertexData.push_back(vertices[(i*9)+2]);
+                vertexData.push_back(vertices[(i*9)+6]);
+                vertexData.push_back(vertices[(i*9)+7]);    
+                vertexData.push_back(vertices[(i*9)+8]);
             }
 
             model = glm::mat4(1.0f);
@@ -281,6 +285,17 @@ int main()
             std::cout << "could not find u_Model" << std::endl;
             exit(EXIT_FAILURE);
         }
+
+
+        // Z' and Z CALCULATIONS
+        if (!GPU_CALCULATIONS) {
+            float z = vertexData[2];
+            float z_prime = (-(near + far) * z + (near * far)) / -z;
+
+            std::cout << "Z: " << z << std::endl;
+            std::cout << "Z': " << z_prime << std::endl;
+        }
+        
 
 
 
@@ -331,11 +346,11 @@ void processInput(GLFWwindow *window)
         // std::cout << "y offset: " << Y_OFFSET << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
-        Z_OFFSET += 0.5f;
+        Z_OFFSET += 0.25f;
         std::cout << "z offset: " << Z_OFFSET << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
-        Z_OFFSET -= 0.5f;
+        Z_OFFSET -= 0.25f;
         std::cout << "z offset: " << Z_OFFSET << std::endl;
     }
 
@@ -380,125 +395,3 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
-
-// std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices, std::vector<glm::vec3>& normals) {    
-//     vertices.clear();
-//     normals.clear();
-
-//     std::ifstream file(filename);
-//     if (!file.is_open()) {
-//         std::cerr << "Error opening file: " << filename << std::endl;
-//         exit(EXIT_FAILURE);
-//         return std::vector<GLfloat>();
-//     }
-
-//     std::vector<GLfloat> faceData;
-//     std::vector<glm::vec3> normalizedVertices;
-//     std::string line;
-//     float max = FLT_MIN;
-//     float min = FLT_MAX;
-//     bool normalized = false;
-//     bool containsNormals = false;
-
-//     while (std::getline(file, line)) {
-//         std::istringstream iss(line);
-//         std::string prefix;
-//         float x,y,z;
-//         std::string sv1, sv2, sv3;
-//         int v1, v2, v3;
-        
-//         iss >> prefix;
-//         if (prefix == "v") {
-//             glm::vec3 vertex;
-//             iss >> x >> y >> z;
-//             updateMinMax(x, min, max);
-//             updateMinMax(y, min, max);
-//             updateMinMax(z, min, max);
-//             vertex.x = x;
-//             vertex.y = y;
-//             vertex.z = z;
-
-//             vertices.push_back(vertex);
-//         } 
-//         else if (prefix == "vn") {
-//             if (!containsNormals)
-//                 containsNormals = true;
-            
-//             glm::vec3 normal;
-//             iss >> x >> y >> z;
-//             normal.x = x;
-//             normal.y = y;
-//             normal.z = z;
-
-//             normals.push_back(normal);
-//         }
-//         else if (prefix == "f") {
-//             if (!normalized) {
-//                  // normalize all of the vectors to be within -1 and 1
-//                 for (glm::vec3 v: vertices) {
-//                     v.x = ((v.x - min) / (max - min)) * (1 - (-1)) - 1;
-//                     v.y = (v.y - min) / (max - min) * (1 - (-1)) - 1;
-//                     v.z = (v.z - min) / (max - min) * (1 - (-1)) - 1;
-//                     normalizedVertices.push_back(v);
-//                 }
-//                 normalized = true;
-//             }
-
-//             iss >> sv1 >> sv2 >> sv3;
-//             v1 = stoi(sv1);  v2 = stoi(sv2);  v3 = stoi(sv3);
-            
-//             // Assuming vertices are 1-indexed in .obj files, convert to 0-indexed
-//             v1--; v2--; v3--;
-//             // vertex 1 location
-//             faceData.push_back(normalizedVertices[v1].x);
-//             faceData.push_back(normalizedVertices[v1].y);
-//             faceData.push_back(normalizedVertices[v1].z);
-//             // vertex 1 color
-//             faceData.push_back(normalizedVertices[v1].x);
-//             faceData.push_back(normalizedVertices[v1].y);
-//             faceData.push_back(normalizedVertices[v1].z);
-//             // vertex 1 normal
-//             if (containsNormals) {
-//                 faceData.push_back(normals[v1].x);
-//                 faceData.push_back(normals[v1].y);
-//                 faceData.push_back(normals[v1].z);
-//             }
-            
-//             // vertex 2 location
-//             faceData.push_back(normalizedVertices[v2].x);
-//             faceData.push_back(normalizedVertices[v2].y);
-//             faceData.push_back(normalizedVertices[v2].z);
-//             // vertex 2 color
-//             faceData.push_back(normalizedVertices[v2].x);
-//             faceData.push_back(normalizedVertices[v2].y);
-//             faceData.push_back(normalizedVertices[v2].z);
-//             // vertex 2 normal
-//             if (containsNormals) {
-//                 faceData.push_back(normals[v2].x);
-//                 faceData.push_back(normals[v2].y);
-//                 faceData.push_back(normals[v2].z);
-//             }
-
-//             // vertex 3 location
-//             faceData.push_back(normalizedVertices[v3].x);
-//             faceData.push_back(normalizedVertices[v3].y);
-//             faceData.push_back(normalizedVertices[v3].z);
-//             // vertex 3 color
-//             faceData.push_back(normalizedVertices[v3].x);
-//             faceData.push_back(normalizedVertices[v3].y);
-//             faceData.push_back(normalizedVertices[v3].z);
-//             // vertex 3 normal
-//             if (containsNormals) {
-//                 faceData.push_back(normals[v3].x);
-//                 faceData.push_back(normals[v3].y);
-//                 faceData.push_back(normals[v3].z);
-//             }
-
-//             numVertices += 3;
-//         }
-//     }
-//     file.close();
-    
-//     std::cout << "Loaded .obj file" << std::endl;
-//     return faceData;
-// }
