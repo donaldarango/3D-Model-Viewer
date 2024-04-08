@@ -10,19 +10,14 @@
 
     void main()
     {
-      // Will be used for attenuation.
-      float distance = length(LightPos - Pos);
   
       // Get a lighting direction vector from the light to the vertex.
       vec3 lightDir = normalize(LightPos - Pos);
 
-      float ambient = 0.2;
+      float ambient = 0.3;
   
-      // Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
-      // pointing in the same direction then it will get max illumination.
       float diffuse = max(dot(Normal, lightDir), 0.1);
-      // Add attenuation.
-      diffuse = diffuse * (1.0 / (1.0 + (.75 * distance * distance)));
+      diffuse = diffuse * 0.3;
 
       vec3 viewDir = normalize(vec3(0) - Pos);
       vec3 reflectDir = reflect(-lightDir, Normal);
