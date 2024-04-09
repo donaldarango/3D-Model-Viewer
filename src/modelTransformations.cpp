@@ -33,8 +33,7 @@ bool GPU_CALCULATIONS = true;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void processShaderInput(GLFWwindow *window, GLuint* program);
-// std::vector<GLfloat> readObjFile(const std::string& filename, std::vector<glm::vec3>& vertices, size_t& numVertices, std::vector<glm::vec3>& normals);
-// void updateMinMax(float value, float &MIN, float &MAX);
+void printInstructions();
 std::string LoadShaderAsString(const std::string& filename);
 GLuint createShaderProgramFromStrings(
     const char* vertex_shader_str,
@@ -71,6 +70,7 @@ std::string LoadShaderAsString(const std::string& filepath) {
 // fragment_shader_str - a null-terminated string of text containing a fragment shader
 // returns a new, valid shader program handle, or 0 if there was a problem
 // asserts on NULL parameters
+// source: https://antongerdelan.net/opengl/shader_hot_reload.html
 GLuint createShaderProgramFromStrings(
   const char* vertex_shader_str,
   const char* fragment_shader_str ) {
@@ -160,6 +160,7 @@ GLuint createShaderProgramFromStrings(
   return shader_program;
 }
 
+// source: https://antongerdelan.net/opengl/shader_hot_reload.html
 void reloadShaderProgramFromFiles(
   GLuint* program,
   const char* vertex_shader_filename,
@@ -221,71 +222,19 @@ int main()
     glewInit();
 
 
-    // load our shaders from filepath and convert to string
+    // load starting shader from filepath and convert to string
     // ------------------------------------
     std::string gouraudVertexShaderString = LoadShaderAsString("shaders/source_gouraud.vs");
     const char* gouraudVertexShaderSource = gouraudVertexShaderString.c_str();
     std::string gouraudFragmentShaderString = LoadShaderAsString("shaders/source_gouraud.fs");
-    const char* gouraudFragmentShaderSource = gouraudFragmentShaderString.c_str();
-
-
-    std::string depthVertexShaderString = LoadShaderAsString("shaders/source_depth.vs");
-    const char* depthVertexShaderSource = depthVertexShaderString.c_str();
-    std::string depthFragmentShaderString = LoadShaderAsString("shaders/source_depth.fs");
-    const char* depthFragmentShaderSource = depthFragmentShaderString.c_str();
-
-    std::string phongVertexShaderString = LoadShaderAsString("shaders/source_phong.vs");
-    const char* phongVertexShaderSource = phongVertexShaderString.c_str();
-    std::string phongFragmentShaderString = LoadShaderAsString("shaders/source_phong.fs");
-    const char* phongFragmentShaderSource = phongFragmentShaderString.c_str();
-    
+    const char* gouraudFragmentShaderSource = gouraudFragmentShaderString.c_str();    
 
     // build and compile our shader program
     // ------------------------------------
     GLuint shaderProgram = createShaderProgramFromStrings(gouraudVertexShaderSource, gouraudFragmentShaderSource);
 
-    // // vertex shader
-    // unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    // glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    // glCompileShader(vertexShader);
-    // // check for shader compile errors
-    // int success;
-    // char infoLog[512];
-    // glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    // if (!success)
-    // {
-    //     glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    //     std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    // }
-    // // fragment shader
-    // unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    // glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    // glCompileShader(fragmentShader);
-    // // check for shader compile errors
-    // glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    // if (!success)
-    // {
-    //     glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    //     std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    // }
-
-    // // link shaders
-    // unsigned int shaderProgram = glCreateProgram();
-    // glAttachShader(shaderProgram, vertexShader);
-    // glAttachShader(shaderProgram, fragmentShader);
-    // glLinkProgram(shaderProgram);
-    // // check for linking errors
-    // glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    // if (!success) {
-    //     glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-    //     std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    // }
-    // glDeleteShader(vertexShader);
-    // glDeleteShader(fragmentShader);
-    
-
     std::string directory = "data/";
-    std::cout << "Opening: " << filename << std::endl;
+    std::cout << "\nOpening: " << filename << std::endl;
     std::string filepath = directory + filename;
     std::vector<glm::vec3> verticesVector;
     std::vector<glm::vec3> normals;
@@ -332,6 +281,8 @@ int main()
         std::cout << "could not find u_LightPos" << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    printInstructions();
 
     // render loop
     // -----------
@@ -478,11 +429,11 @@ void processInput(GLFWwindow *window)
     }
     if (glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
         Z_OFFSET += 0.25f;
-        std::cout << "z offset: " << Z_OFFSET << std::endl;
+        // std::cout << "z offset: " << Z_OFFSET << std::endl;
     }
     if (glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
         Z_OFFSET -= 0.25f;
-        std::cout << "z offset: " << Z_OFFSET << std::endl;
+        // std::cout << "z offset: " << Z_OFFSET << std::endl;
     }
 
     // ROTATION
@@ -540,4 +491,14 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // make sure the viewport matches the new window dimensions; note that width and 
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
+}
+
+void printInstructions() {
+    std::cout<< "\nDefault shader: Gouraud shading" << std::endl;
+    std::cout<< "To change shader programs, press a key below" << std::endl;
+    std::cout<< "--------------------------------------" << std::endl;
+    std::cout<< "(8) : Gouraud Shading" << std::endl;
+    std::cout<< "(9) : Phong Shading" << std::endl;
+    std::cout<< "(0) : Depth Buffer Z" << std::endl;
+    std::cout<< "(-) : Depth Buffer Z'" << std::endl;
 }

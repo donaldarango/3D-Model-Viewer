@@ -8,15 +8,11 @@
     
     float LinearizeDepth(float depth) 
     {
-        // float z = depth * 2.0 - 1.0; // back to NDC 
-        return (2.0 * near) / (far + near - depth * (far - near));	  
+        return (2.0 * near) / (far + near - (depth * 2 - 1.0) * (far - near));	  
     }
 
     void main()
     {             
-
-        // Z
-        float depth = (near * far) / (-(vertexPosition.z) + (near + far));
-
+        float depth = LinearizeDepth(gl_FragCoord.z);
         FragColor = vec4(vec3(depth), 1.0);
     }

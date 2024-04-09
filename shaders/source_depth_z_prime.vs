@@ -17,6 +17,6 @@
       vec3 modelViewVertex = vec3(u_Model * vec4(a_Pos, 1.0)); // vertex pos in eye space
 
       // projection * model * position
-      vertexPosition = u_Projection * vec4(modelViewVertex, 1.0);
-      gl_Position = vertexPosition;
+      vertexPosition = vec4(modelViewVertex, 1.0);
+      gl_Position = u_Projection * vec4(modelViewVertex, 1.0);
     } 

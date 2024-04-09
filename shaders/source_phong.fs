@@ -22,7 +22,7 @@
       vec3 viewDir = normalize(vec3(0) - Pos);
       vec3 reflectDir = reflect(-lightDir, Normal);
 
-      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+      float spec = pow(max(dot(viewDir, reflectDir), 0.0), 64);
       float specular = 0.4 * spec;  
   
       // Multiply the color by the diffuse illumination level to get final output color.

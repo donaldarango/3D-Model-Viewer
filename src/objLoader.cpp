@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstring>
 
+// source: https://github.com/tinyobjloader/tinyobjloader
 std::vector<float> load_model_from_file(std::string &filename, glm::mat4 preTransform, size_t &numVertices) {
 	
 	std::vector<float> vertices;
@@ -26,7 +27,7 @@ std::vector<float> load_model_from_file(std::string &filename, glm::mat4 preTran
 
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
-    auto& materials = reader.GetMaterials();
+    // auto& materials = reader.GetMaterials();
 
     // Loop over shapes
 	for (size_t s = 0; s < shapes.size(); s++) {
