@@ -1,3 +1,6 @@
+## Disclaimer
+Due to some technical issues during the semester, Gavin's laptop and IDE was not properly linking to the project's set up however he stilled contributed as the project was mostly done via pair programming either over screen-shared calls or in person meet ups. While the GitHub may not be reflected of these contributions, they were recognized in the class and within the team itself. 
+
 ## Description
 3D Model Viewer project created for Graphics Programming class written in C++.
 The program can load in .obj files from the data directory and you can apply transformations to them using the keyboard.
